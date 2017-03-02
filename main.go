@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/honeycombio/libhoney-go"
 	flag "github.com/jessevdk/go-flags"
@@ -15,11 +16,12 @@ var BuildID string
 type Options struct {
 	APIHost string `hidden:"true" long:"api_host" description:"APIHost for the Honeycomb API" default:"https://api.honeycomb.io/"`
 
-	WriteKey string   `short:"k" long:"writekey" description:"Team write key" required:"true"`
-	Dataset  string   `short:"d" long:"dataset" description:"Name of the dataset" required:"true"`
-	Name     []string `short:"n" long:"name" description:"Metric name"`
-	Val      []string `short:"v" long:"value" description:"Metric value"`
-	Verbose  bool     `short:"V" long:"verbose" description:"Show output"`
+	WriteKey  string   `short:"k" long:"writekey" description:"Team write key" required:"true"`
+	Dataset   string   `short:"d" long:"dataset" description:"Name of the dataset" required:"true"`
+	Timestamp string   `short:"t" long:"timestamp" description:"Set a specific timestamp (RFC3339) for this event (override the default of now)"`
+	Name      []string `short:"n" long:"name" description:"Metric name"`
+	Val       []string `short:"v" long:"value" description:"Metric value"`
+	Verbose   bool     `short:"V" long:"verbose" description:"Show output"`
 }
 
 func main() {
@@ -42,6 +44,13 @@ func main() {
 	defer libhoney.Close()
 
 	ev := libhoney.NewEvent()
+
+	if opts.Timestamp {
+		t1, err := time.Parse(time.RFC3339, opts.Timestamp)
+		if err != nil {
+			ev.Timestamp = t1
+		}
+	}
 	for i, name := range opts.Name {
 		if val, err := strconv.Atoi(opts.Val[i]); err == nil {
 			ev.AddField(name, val)
