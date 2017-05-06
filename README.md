@@ -1,5 +1,5 @@
 # honeyvent
-CLI for sending individual events in to Honeycomb
+CLI for sending individual events in to [Honeycomb](https://honeycomb.io/docs)
 
 Use - call with a collection of names and values to send an event from the
 command line:
