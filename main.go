@@ -45,7 +45,7 @@ func main() {
 
 	ev := libhoney.NewEvent()
 
-	if opts.Timestamp {
+	if opts.Timestamp != "" {
 		t1, err := time.Parse(time.RFC3339, opts.Timestamp)
 		if err != nil {
 			ev.Timestamp = t1
