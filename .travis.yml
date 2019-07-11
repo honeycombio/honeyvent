@@ -10,7 +10,7 @@ script:
 
 deploy:
     provider: releases
-    api_key: $GITHUB_OAUTH_TOKEN
+    api_key: $GITHUB_TOKEN
     file: ./honeyvent
     skip_cleanup: true
     on:
