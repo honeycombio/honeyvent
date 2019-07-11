@@ -11,7 +11,9 @@ dist: trusty
 go:
     - 1.11
 
-script: go build
+script:
+    - go build
+    - find . -type f -name honeyvent
 
 deploy:
     provider: releases
