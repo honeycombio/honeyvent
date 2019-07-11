@@ -11,11 +11,7 @@ dist: trusty
 go:
     - 1.11
 
-script: go test github.com/honeycombio/honeyvent/...
-
-after_success:
-    - rm $GOPATH/bin/honeyvent
-    - go install -ldflags "-X main.BuildID=1.${TRAVIS_BUILD_NUMBER}" github.com/honeycombio/honeyvent/...
+script: go build
 
 deploy:
     provider: releases
