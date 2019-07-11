@@ -7,11 +7,10 @@ go:
 
 script:
     - go build
-    - find . -type f -name honeyvent
 
 deploy:
     provider: releases
-    file: $GOPATH/bin/honeyvent
+    file: ./honeyvent
     skip_cleanup: true
     on:
       tags: true
