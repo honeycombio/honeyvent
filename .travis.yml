@@ -23,4 +23,4 @@ deploy:
     file: $GOPATH/bin/honeyvent
     skip_cleanup: true
     on:
-      tags: false
+      tags: true
