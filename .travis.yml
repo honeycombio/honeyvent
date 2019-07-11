@@ -10,13 +10,17 @@ dist: trusty
 
 go:
     - 1.6
-install:
-    # install hub
-    - URL=https://github.com/github/hub/releases/download/v2.12.2/hub-linux-amd64-2.12.2.tgz wget "$URL" -O /tmp/$(basename $URL) && tar -xvf /tmp/$(basename $URL) -C /usr/local/opt && ln -s /usr/local/opt/$(basename $URL)/bin/hub /usr/local/bin/hub
 
 script: go test github.com/honeycombio/honeyvent/...
 
 after_success:
-    - hub release create -a $GOPATH/bin/honeyvent -m ""
     - rm $GOPATH/bin/honeyvent
     - go install -ldflags "-X main.BuildID=1.${TRAVIS_BUILD_NUMBER}" github.com/honeycombio/honeyvent/...
+
+deploy:
+    provider: releases
+    api_key: $GITHUB_OAUTH_TOKEN
+    file: $GOPATH/bin/honeyvent
+    skip_cleanup: true
+    on:
+      tags: true
