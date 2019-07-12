@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/honeycombio/libhoney-go"
+	libhoney "github.com/honeycombio/libhoney-go"
 	flag "github.com/jessevdk/go-flags"
 )
 
@@ -42,6 +42,7 @@ func main() {
 	}
 	libhoney.Init(c)
 	defer libhoney.Close()
+	libhoney.UserAgentAddition = fmt.Sprintf("honeyvent/%s", BuildID)
 
 	ev := libhoney.NewEvent()
 
