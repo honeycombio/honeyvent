@@ -8,5 +8,7 @@ command line:
 honeyvent -k <writekey> -d <dataset> -n field -v val -n field -v val ...
 ```
 
+If you are targetting a local instance of Honeycomb, use the `api_host` parameter, e.g: `--api_host=http://localhost:8888`
+
 The tool will detect floats and ints and send them as numbers; everything else
 turns in to strings.  Quote any values that have spaces.
