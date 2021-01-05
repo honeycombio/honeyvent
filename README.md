@@ -1,7 +1,17 @@
 # honeyvent
 CLI for sending individual events in to [Honeycomb](https://honeycomb.io/docs)
 
-Use - call with a collection of names and values to send an event from the
+## Installation
+
+If you have a working go environment in your build, the easiest way to install `honeyvent` is via `go get`.
+
+```
+go get github.com/honeycombio/honeyvent/
+```
+
+## Usage
+
+Call with a collection of names and values to send an event from the
 command line:
 
 ```
