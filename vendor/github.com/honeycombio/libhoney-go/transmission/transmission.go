@@ -12,7 +12,6 @@ package transmission
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +25,8 @@ import (
 	"time"
 
 	"github.com/facebookgo/muster"
-	"github.com/vmihailenco/msgpack"
+	"github.com/klauspost/compress/zstd"
+	"github.com/vmihailenco/msgpack/v4"
 )
 
 const (
@@ -39,21 +39,44 @@ const (
 var Version string
 
 type Honeycomb struct {
-	MaxBatchSize           uint          // how many events to collect into a batch before sending
-	BatchTimeout           time.Duration // how often to send off batches
-	MaxConcurrentBatches   uint          // how many batches can be inflight simultaneously
-	PendingWorkCapacity    uint          // how many events to allow to pile up
-	BlockOnSend            bool          // whether to block or drop events when the queue fills
-	BlockOnResponse        bool          // whether to block or drop responses when the queue fills
-	UserAgentAddition      string
-	DisableGzipCompression bool // toggles gzip compression when sending batches of events
-	EnableMsgpackEncoding  bool // set true to revert to send events with msgpack encoding
+	// how many events to collect into a batch before sending
+	MaxBatchSize uint
 
-	responses chan Response
+	// how often to send off batches
+	BatchTimeout time.Duration
+
+	// how many batches can be inflight simultaneously
+	MaxConcurrentBatches uint
+
+	// how many events to allow to pile up
+	// if not specified, then the work channel becomes blocking
+	// and attempting to add an event to the queue can fail
+	PendingWorkCapacity uint
+
+	// whether to block or drop events when the queue fills
+	BlockOnSend bool
+
+	// whether to block or drop responses when the queue fills
+	BlockOnResponse bool
+
+	UserAgentAddition string
+
+	// toggles compression when sending batches of events
+	DisableCompression bool
+
+	// Deprecated, synonymous with DisableCompression
+	DisableGzipCompression bool
+
+	// set true to send events with msgpack encoding
+	EnableMsgpackEncoding bool
+
+	batchMaker func() muster.Batch
+	responses  chan Response
 
 	Transport http.RoundTripper
 
-	muster muster.Client
+	muster     *muster.Client
+	musterLock sync.RWMutex
 
 	Logger  Logger
 	Metrics Metrics
@@ -65,29 +88,41 @@ func (h *Honeycomb) Start() error {
 	}
 	h.Logger.Printf("default transmission starting")
 	h.responses = make(chan Response, h.PendingWorkCapacity*2)
-	h.muster.MaxBatchSize = h.MaxBatchSize
-	h.muster.BatchTimeout = h.BatchTimeout
-	h.muster.MaxConcurrentBatches = h.MaxConcurrentBatches
-	h.muster.PendingWorkCapacity = h.PendingWorkCapacity
 	if h.Metrics == nil {
 		h.Metrics = &nullMetrics{}
 	}
-	h.muster.BatchMaker = func() muster.Batch {
-		return &batchAgg{
-			userAgentAddition: h.UserAgentAddition,
-			batches:           map[string][]*Event{},
-			httpClient: &http.Client{
-				Transport: h.Transport,
-				Timeout:   60 * time.Second,
-			},
-			blockOnResponse:        h.BlockOnResponse,
-			responses:              h.responses,
-			metrics:                h.Metrics,
-			disableGzipCompression: h.DisableGzipCompression,
-			enableMsgpackEncoding:  h.EnableMsgpackEncoding,
+	if h.batchMaker == nil {
+		h.batchMaker = func() muster.Batch {
+			return &batchAgg{
+				userAgentAddition: h.UserAgentAddition,
+				batches:           map[string][]*Event{},
+				httpClient: &http.Client{
+					Transport: h.Transport,
+					Timeout:   60 * time.Second,
+				},
+				blockOnResponse:       h.BlockOnResponse,
+				responses:             h.responses,
+				metrics:               h.Metrics,
+				disableCompression:    h.DisableGzipCompression || h.DisableCompression,
+				enableMsgpackEncoding: h.EnableMsgpackEncoding,
+				logger:                h.Logger,
+			}
 		}
 	}
+
+	m := h.createMuster()
+	h.muster = m
 	return h.muster.Start()
+}
+
+func (h *Honeycomb) createMuster() *muster.Client {
+	m := new(muster.Client)
+	m.MaxBatchSize = h.MaxBatchSize
+	m.BatchTimeout = h.BatchTimeout
+	m.MaxConcurrentBatches = h.MaxConcurrentBatches
+	m.PendingWorkCapacity = h.PendingWorkCapacity
+	m.BatchMaker = h.batchMaker
+	return m
 }
 
 func (h *Honeycomb) Stop() error {
@@ -97,25 +132,58 @@ func (h *Honeycomb) Stop() error {
 	return err
 }
 
+func (h *Honeycomb) Flush() (err error) {
+	// There isn't a way to flush a muster.Client directly, so we have to stop
+	// the old one (which has a side-effect of flushing the data) and make a new
+	// one. We start the new one and swap it with the old one so that we minimize
+	// the time we hold the musterLock for.
+	m := h.muster
+	newMuster := h.createMuster()
+	err = newMuster.Start()
+	if err != nil {
+		return err
+	}
+	h.musterLock.Lock()
+	h.muster = newMuster
+	h.musterLock.Unlock()
+	return m.Stop()
+}
+
+// Add enqueues ev to be sent. If a Flush is in-progress, this will block until
+// it completes. Similarly, if BlockOnSend is set and the pending work is more
+// than the PendingWorkCapacity, this will block a Flush until more pending
+// work can be enqueued.
 func (h *Honeycomb) Add(ev *Event) {
+	if h.tryAdd(ev) {
+		h.Metrics.Increment("messages_queued")
+		return
+	}
+	h.Metrics.Increment("queue_overflow")
+	r := Response{
+		Err:      errors.New("queue overflow"),
+		Metadata: ev.Metadata,
+	}
+	h.Logger.Printf("got response code %d, error %s, and body %s",
+		r.StatusCode, r.Err, string(r.Body))
+	writeToResponse(h.responses, r, h.BlockOnResponse)
+}
+
+// tryAdd attempts to add ev to the underlying muster. It returns false if this
+// was unsucessful because the muster queue (muster.Work) is full.
+func (h *Honeycomb) tryAdd(ev *Event) bool {
+	h.musterLock.RLock()
+	defer h.musterLock.RUnlock()
 	h.Logger.Printf("adding event to transmission; queue length %d", len(h.muster.Work))
 	h.Metrics.Gauge("queue_length", len(h.muster.Work))
 	if h.BlockOnSend {
 		h.muster.Work <- ev
-		h.Metrics.Increment("messages_queued")
+		return true
 	} else {
 		select {
 		case h.muster.Work <- ev:
-			h.Metrics.Increment("messages_queued")
+			return true
 		default:
-			h.Metrics.Increment("queue_overflow")
-			r := Response{
-				Err:      errors.New("queue overflow"),
-				Metadata: ev.Metadata,
-			}
-			h.Logger.Printf("got response code %d, error %s, and body %s",
-				r.StatusCode, r.Err, string(r.Body))
-			writeToResponse(h.responses, r, h.BlockOnResponse)
+			return false
 		}
 	}
 }
@@ -143,12 +211,12 @@ type batchAgg struct {
 	// map of batch key to a list of events destined for that batch
 	batches map[string][]*Event
 	// Used to reenque events when an initial batch is too large
-	overflowBatches        map[string][]*Event
-	httpClient             *http.Client
-	blockOnResponse        bool
-	userAgentAddition      string
-	disableGzipCompression bool
-	enableMsgpackEncoding  bool
+	overflowBatches       map[string][]*Event
+	httpClient            *http.Client
+	blockOnResponse       bool
+	userAgentAddition     string
+	disableCompression    bool
+	enableMsgpackEncoding bool
 
 	responses chan Response
 	// numEncoded       int
@@ -158,6 +226,8 @@ type batchAgg struct {
 	// allows manipulation of the value of "now" for testing
 	testNower   nower
 	testBlocker *sync.WaitGroup
+
+	logger Logger
 }
 
 // batch is a collection of events that will all be POSTed as one HTTP call
@@ -316,11 +386,11 @@ func (b *batchAgg) fireBatch(events []*Event) {
 		}
 
 		var req *http.Request
-		reqBody, gzipped := buildReqReader(encEvs, !b.disableGzipCompression)
+		reqBody, zipped := buildReqReader(encEvs, !b.disableCompression)
 		req, err = http.NewRequest("POST", url.String(), reqBody)
 		req.Header.Set("Content-Type", contentType)
-		if gzipped {
-			req.Header.Set("Content-Encoding", "gzip")
+		if zipped {
+			req.Header.Set("Content-Encoding", "zstd")
 		}
 
 		req.Header.Set("User-Agent", userAgent)
@@ -370,17 +440,30 @@ func (b *batchAgg) fireBatch(events []*Event) {
 			body, err = ioutil.ReadAll(resp.Body)
 		}
 		if err != nil {
-			b.enqueueErrResponses(fmt.Errorf("Got HTTP error code but couldn't read response body: %v", err),
-				events, dur/time.Duration(numEncoded))
+			b.enqueueErrResponses(
+				fmt.Errorf("Got HTTP error code but couldn't read response body: %v", err),
+				events,
+				dur/time.Duration(numEncoded),
+			)
 			return
 		}
+		// log if write key was rejected because of invalid Write / API key
+		if resp.StatusCode == http.StatusUnauthorized {
+			b.logger.Printf("APIKey '%s' was rejected. Please verify APIKey is correct.", writeKey)
+		}
 		for _, ev := range events {
+			err := fmt.Errorf(
+				"got unexpected HTTP status %d: %s",
+				resp.StatusCode,
+				http.StatusText(resp.StatusCode),
+			)
 			if ev != nil {
 				b.enqueueResponse(Response{
 					StatusCode: resp.StatusCode,
 					Body:       body,
 					Duration:   dur / time.Duration(numEncoded),
 					Metadata:   ev.Metadata,
+					Err:        err,
 				})
 			}
 		}
@@ -408,7 +491,7 @@ func (b *batchAgg) fireBatch(events []*Event) {
 	var eIdx int
 	for _, resp := range batchResponses {
 		resp.Duration = dur / time.Duration(numEncoded)
-		for events[eIdx] == nil {
+		for eIdx < len(events) && events[eIdx] == nil {
 			fmt.Printf("incr, eIdx: %d, len(evs): %d\n", eIdx, len(events))
 			eIdx++
 		}
@@ -538,21 +621,55 @@ func (b *batchAgg) enqueueErrResponses(err error, events []*Event, duration time
 	}
 }
 
+var zstdBufferPool sync.Pool
+
+type pooledReader struct {
+	*bytes.Reader
+	buf []byte
+}
+
+func (r *pooledReader) Close() error {
+	zstdBufferPool.Put(r.buf[:0])
+	r.Reader = nil
+	r.buf = nil
+	return nil
+}
+
+// Instantiating a new encoder is expensive, so use a global one.
+// EncodeAll() is concurrency-safe.
+var zstdEncoder *zstd.Encoder
+
+func init() {
+	var err error
+	zstdEncoder, err = zstd.NewWriter(
+		nil,
+		// Compression level 2 gives a good balance of speed and compression.
+		zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(2)),
+		// zstd allocates 2 * GOMAXPROCS * window size, so use a small window.
+		// Most honeycomb messages are smaller than this.
+		zstd.WithWindowSize(1<<16),
+	)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // buildReqReader returns an io.Reader and a boolean, indicating whether or not
-// the io.Reader is gzip-compressed.
-func buildReqReader(jsonEncoded []byte, useGzip bool) (io.Reader, bool) {
-	if useGzip {
-		buf := bytes.Buffer{}
-		g := gzip.NewWriter(&buf)
-		if _, err := g.Write(jsonEncoded); err == nil {
-			if err = g.Close(); err == nil { // flush
-				return &buf, true
-			}
+// the io.Reader is compressed.
+func buildReqReader(jsonEncoded []byte, compress bool) (io.ReadCloser, bool) {
+	if compress {
+		var buf []byte
+		if found, ok := zstdBufferPool.Get().([]byte); ok {
+			buf = found[:0]
 		}
 
-		return bytes.NewReader(jsonEncoded), false
+		buf = zstdEncoder.EncodeAll(jsonEncoded, buf)
+		return &pooledReader{
+			Reader: bytes.NewReader(buf),
+			buf:    buf,
+		}, true
 	}
-	return bytes.NewReader(jsonEncoded), false
+	return ioutil.NopCloser(bytes.NewReader(jsonEncoded)), false
 }
 
 // nower to make testing easier
