@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -24,6 +25,18 @@ type Options struct {
 	Verbose   bool     `short:"V" long:"verbose" description:"Show output"`
 }
 
+// parseAPIHost parses the provided APIHost argument and sets sensible defaults if they are not provided.
+func parseAPIHost(host string) (*url.URL, error) {
+	u, err := url.Parse(host)
+	if err != nil {
+		return nil, err
+	}
+	if len(u.Scheme) == 0 {
+		u.Scheme = "https"
+	}
+	return u, nil
+}
+
 func main() {
 	var opts Options
 	flagParser := flag.NewParser(&opts, flag.Default)
@@ -35,10 +48,15 @@ func main() {
 		errAndExit("Must have a value for each metric name - call with --help for usage")
 	}
 
+	u, err := parseAPIHost(opts.APIHost)
+	if err != nil {
+		errAndExit(fmt.Sprintf("Unable to parse API host: %s", err.Error()))
+	}
+
 	c := libhoney.Config{
 		WriteKey: opts.WriteKey,
 		Dataset:  opts.Dataset,
-		APIHost:  opts.APIHost,
+		APIHost:  u.String(),
 	}
 	libhoney.Init(c)
 	defer libhoney.Close()
