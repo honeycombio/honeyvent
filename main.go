@@ -54,7 +54,7 @@ func main() {
 	}
 
 	c := libhoney.Config{
-		WriteKey: opts.WriteKey,
+		APIKey: opts.WriteKey,
 		Dataset:  opts.Dataset,
 		APIHost:  u.String(),
 	}
@@ -84,7 +84,7 @@ func main() {
 		fmt.Println("sending event", ev)
 	}
 	ev.Send()
-	rs := libhoney.Responses()
+	rs := libhoney.TxResponses()
 	rsp := <-rs
 	if opts.Verbose {
 		fmt.Printf("sent event %+v\n", map[string]interface{}{
