@@ -6,15 +6,16 @@ github.com/facebookgo/limitgroup
 github.com/facebookgo/muster
 # github.com/golang/protobuf v1.3.5
 github.com/golang/protobuf/proto
-# github.com/honeycombio/libhoney-go v1.15.2
+# github.com/golang/snappy v0.0.3
+github.com/golang/snappy
+# github.com/honeycombio/libhoney-go v1.15.3
 github.com/honeycombio/libhoney-go
 github.com/honeycombio/libhoney-go/transmission
 # github.com/jessevdk/go-flags v1.5.0
 github.com/jessevdk/go-flags
-# github.com/klauspost/compress v1.11.4
+# github.com/klauspost/compress v1.12.2
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
-github.com/klauspost/compress/snappy
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/vmihailenco/msgpack/v4 v4.3.12
