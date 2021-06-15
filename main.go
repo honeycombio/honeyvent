@@ -54,9 +54,9 @@ func main() {
 	}
 
 	c := libhoney.Config{
-		APIKey: opts.WriteKey,
-		Dataset:  opts.Dataset,
-		APIHost:  u.String(),
+		APIKey:  opts.WriteKey,
+		Dataset: opts.Dataset,
+		APIHost: u.String(),
 	}
 	libhoney.Init(c)
 	defer libhoney.Close()
