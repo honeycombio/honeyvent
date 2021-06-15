@@ -41,6 +41,12 @@ func main() {
 	var opts Options
 	flagParser := flag.NewParser(&opts, flag.Default)
 	if extraArgs, err := flagParser.Parse(); err != nil || len(extraArgs) != 0 {
+		if flagErr, ok := err.(*flag.Error); ok {
+			if flagErr.Type == flag.ErrHelp {
+				// asking for help isn't a failed run.
+				os.Exit(0)
+			}
+		}
 		errAndExit("command line parsing error - call with --help for usage")
 	}
 
