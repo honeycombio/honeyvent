@@ -5,7 +5,7 @@ orbs:
 
 executors:
   linuxgo:
-    working_directory: /go/src/github.com/honeycombio/honeyvent
+    working_directory: /home/circleci/go/src/github.com/honeycombio/honeyvent
     docker:
       - image: cimg/go:1.16
         environment:
