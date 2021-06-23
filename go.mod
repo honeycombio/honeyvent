@@ -1,6 +1,6 @@
 module github.com/honeycombio/honeyvent
 
-go 1.12
+go 1.16
 
 require (
 	github.com/honeycombio/libhoney-go v1.15.3

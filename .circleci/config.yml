@@ -1,13 +1,15 @@
 version: 2.1
 
 orbs:
-  buildevents: honeycombio/buildevents@0.2.1
+  buildevents: honeycombio/buildevents@0.2.8
 
 executors:
   linuxgo:
     working_directory: /go/src/github.com/honeycombio/honeyvent
     docker:
-      - image: circleci/golang:1.12
+      - image: cimg/go:1.16
+        environment:
+          GO111MODULE: "on"
 
 
 commands:
@@ -79,7 +81,7 @@ jobs:
                 path: artifacts/
   publish:
     docker:
-      - image: cibuilds/github:0.12.1
+      - image: cibuilds/github:0.12.2
     steps:
       - buildevents/with_job_span:
           steps:
