@@ -73,8 +73,9 @@ func main() {
 	if opts.Timestamp != "" {
 		t1, err := time.Parse(time.RFC3339, opts.Timestamp)
 		if err != nil {
-			ev.Timestamp = t1
+			errAndExit(fmt.Sprintf("Unable to parse timestamp: %v", err))
 		}
+		ev.Timestamp = t1
 	}
 	for i, name := range opts.Name {
 		if val, err := strconv.Atoi(opts.Val[i]); err == nil {
