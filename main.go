@@ -102,6 +102,9 @@ func main() {
 		})
 	}
 
+	if rsp.Err != nil {
+		errAndExit(rsp.Err.Error())
+	}
 }
 
 func errAndExit(reason string) {
