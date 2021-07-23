@@ -80,6 +80,10 @@ func main() {
 	for i, name := range opts.Name {
 		if val, err := strconv.Atoi(opts.Val[i]); err == nil {
 			ev.AddField(name, val)
+		} else if val := strings.ToLower(opts.Val[i]); val == "nan" || val == "inf" || val == "-inf" {
+			// special exception because we don't want these special floats to parse as float
+			// since then the field will get dropped on ingestion
+			ev.AddField(name, val)
 		} else if val, err := strconv.ParseFloat(opts.Val[i], 64); err == nil {
 			ev.AddField(name, val)
 		} else {
