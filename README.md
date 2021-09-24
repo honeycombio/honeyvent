@@ -1,6 +1,6 @@
 # honeyvent
 
-[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/honeyvent)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
+[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/honeyvent?color=success)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 
 CLI for sending individual events in to [Honeycomb](https://honeycomb.io/docs)
 
