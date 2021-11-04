@@ -25,7 +25,7 @@ type Options struct {
 	Name        []string `short:"n" long:"name" description:"Metric name"`
 	Val         []string `short:"v" long:"value" description:"Metric value"`
 	Verbose     bool     `short:"V" long:"verbose" description:"Show output"`
-	NoTLSVerify bool     `long:"no-tls-verify" description:"Allow a cert that can't be verified"`
+	NoTLSVerify bool     `long:"no-tls-verify" description:"Skip TLS certificate verification"`
 }
 
 // parseAPIHost parses the provided APIHost argument and sets sensible defaults if they are not provided.
