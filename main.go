@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -17,12 +19,13 @@ var BuildID string
 type Options struct {
 	APIHost string `hidden:"true" long:"api_host" description:"APIHost for the Honeycomb API" default:"https://api.honeycomb.io/"`
 
-	WriteKey  string   `short:"k" long:"writekey" description:"Team write key" required:"true"`
-	Dataset   string   `short:"d" long:"dataset" description:"Name of the dataset" required:"true"`
-	Timestamp string   `short:"t" long:"timestamp" description:"Set a specific timestamp (RFC3339) for this event (override the default of now)"`
-	Name      []string `short:"n" long:"name" description:"Metric name"`
-	Val       []string `short:"v" long:"value" description:"Metric value"`
-	Verbose   bool     `short:"V" long:"verbose" description:"Show output"`
+	WriteKey    string   `short:"k" long:"writekey" description:"Team write key" required:"true"`
+	Dataset     string   `short:"d" long:"dataset" description:"Name of the dataset" required:"true"`
+	Timestamp   string   `short:"t" long:"timestamp" description:"Set a specific timestamp (RFC3339) for this event (override the default of now)"`
+	Name        []string `short:"n" long:"name" description:"Metric name"`
+	Val         []string `short:"v" long:"value" description:"Metric value"`
+	Verbose     bool     `short:"V" long:"verbose" description:"Show output"`
+	NoTLSVerify bool     `long:"no-tls-verify" description:"Skip TLS certificate verification"`
 }
 
 // parseAPIHost parses the provided APIHost argument and sets sensible defaults if they are not provided.
@@ -57,6 +60,10 @@ func main() {
 	u, err := parseAPIHost(opts.APIHost)
 	if err != nil {
 		errAndExit(fmt.Sprintf("Unable to parse API host: %s", err.Error()))
+	}
+
+	if opts.NoTLSVerify {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	c := libhoney.Config{
