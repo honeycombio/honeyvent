@@ -1,6 +1,6 @@
 # Honeyvent Changelog
 
-## v1.1.0 2021-11-05
+## 1.1.0 2021-11-05
 
 ### Enhancements
 
