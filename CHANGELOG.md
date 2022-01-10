@@ -1,5 +1,13 @@
 # Honeyvent Changelog
 
+## 1.1.1 2022-01-10
+
+- Update go and libhoney-go (#48) | [@MikeGoldsmith](https://github.com/MikeGoldsmith)
+- gh: add re-triage workflow (#47) | [@vreynolds](https://github.com/vreynolds)
+- gh: add re-triage workflow (#46) | [@vreynolds](https://github.com/vreynolds)
+- Update dependabot to monthly (#45) | [@vreynolds](https://github.com/vreynolds)
+- create draft github release on publish (#44) | [@MikeGoldsmith](https://github.com/MikeGoldsmith)
+
 ## 1.1.0 2021-11-05
 
 ### Enhancements
