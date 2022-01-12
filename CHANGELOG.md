@@ -2,6 +2,8 @@
 
 ## 1.1.1 2022-01-10
 
+### Maintenance
+
 - Update go and libhoney-go (#48) | [@MikeGoldsmith](https://github.com/MikeGoldsmith)
 - gh: add re-triage workflow (#47) | [@vreynolds](https://github.com/vreynolds)
 - gh: add re-triage workflow (#46) | [@vreynolds](https://github.com/vreynolds)
