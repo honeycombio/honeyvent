@@ -1,5 +1,13 @@
 # Honeyvent Changelog
 
+## 1.1.2 2022-04-26
+
+### Maintenance
+
+- update circle image to go1.18 (#52) | [@JamieDanielson](https://github.com/JamieDanielson)
+  - fixes openSSL CVE
+- fix github release commands during publish (#53) | [@MikeGoldsmith](https://github.com/MikeGoldsmith)
+
 ## 1.1.1 2022-01-10
 
 ### Maintenance
