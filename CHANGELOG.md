@@ -1,5 +1,11 @@
 # Honeyvent Changelog
 
+## 1.1.3 2022-07-20
+
+### Maintenance
+
+- fix openSSL CVE by re-releasing, which will use a new image to build | [@kentquirk](https://github.com/kentquirk)
+
 ## 1.1.2 2022-04-26
 
 ### Maintenance
