@@ -3,7 +3,7 @@ module github.com/honeycombio/honeyvent
 go 1.17
 
 require (
-	github.com/honeycombio/libhoney-go v1.17.0
+	github.com/honeycombio/libhoney-go v1.18.0
 	github.com/jessevdk/go-flags v1.5.0
 )
 

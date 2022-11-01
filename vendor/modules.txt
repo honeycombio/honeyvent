@@ -7,10 +7,11 @@ github.com/facebookgo/limitgroup
 # github.com/facebookgo/muster v0.0.0-20150708232844-fd3d7953fd52
 ## explicit
 github.com/facebookgo/muster
-# github.com/honeycombio/libhoney-go v1.17.0
+# github.com/honeycombio/libhoney-go v1.18.0
 ## explicit; go 1.14
 github.com/honeycombio/libhoney-go
 github.com/honeycombio/libhoney-go/transmission
+github.com/honeycombio/libhoney-go/version
 # github.com/jessevdk/go-flags v1.5.0
 ## explicit; go 1.15
 github.com/jessevdk/go-flags
