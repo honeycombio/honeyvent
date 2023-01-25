@@ -1,8 +1,5 @@
 version: 2.1
 
-orbs:
-  buildevents: honeycombio/buildevents@0.9.0
-
 executors:
   linuxgo:
     working_directory: /home/circleci/go/src/github.com/honeycombio/honeyvent
@@ -10,7 +7,6 @@ executors:
       - image: cimg/go:1.18
         environment:
           GO111MODULE: "on"
-
 
 commands:
   go-build:
@@ -29,96 +25,63 @@ commands:
       - run: |
           GOOS=<< parameters.os >> \
           GOARCH=<< parameters.arch >> \
-          buildevents cmd $CIRCLE_WORKFLOW_ID $BUILDEVENTS_SPAN_ID go_build -- \
           go build -ldflags "-X main.BuildID=${CIRCLE_TAG}" \
           -o $GOPATH/bin/honeyvent-<< parameters.os >>-<< parameters.arch >> \
           ./...
 
 jobs:
-  setup:
-    executor: linuxgo
-    steps:
-      - buildevents/start_trace
-  watch:
-    executor: linuxgo
-    steps:
-      - buildevents/watch_build_and_finish
-
   test:
     executor: linuxgo
     steps:
-      - buildevents/with_job_span:
-          steps:
-            - checkout
-            - buildevents/berun:
-                bename: go_test
-                becommand: go test -v ./...
+      - checkout
+      - run:
+          name: go_test
+          command: go test -v ./...
   build:
     executor: linuxgo
     steps:
-      - buildevents/with_job_span:
-          steps:
-            - checkout
-            - go-build:
-                os: linux
-                arch: "386"
-            - go-build:
-                os: linux
-                arch: amd64
-            - go-build:
-                os: linux
-                arch: arm64
-            - go-build:
-                os: darwin
-                arch: amd64
-            - run: mkdir -v artifacts; cp -v $GOPATH/bin/honeyvent-* artifacts/
-            - run: tar -cvf artifacts/honeyvent.tar artifacts/honeyvent-*
-            - persist_to_workspace:
-                root: artifacts
-                paths:
-                  - honeyvent.tar
-            - store_artifacts:
-                path: artifacts/
+      - checkout
+      - go-build:
+          os: linux
+          arch: "386"
+      - go-build:
+          os: linux
+          arch: amd64
+      - go-build:
+          os: linux
+          arch: arm64
+      - go-build:
+          os: darwin
+          arch: amd64
+      - run: mkdir -v artifacts; cp -v $GOPATH/bin/honeyvent-* artifacts/
+      - run: tar -cvf artifacts/honeyvent.tar artifacts/honeyvent-*
+      - persist_to_workspace:
+          root: artifacts
+          paths:
+            - honeyvent.tar
+      - store_artifacts:
+          path: artifacts/
   publish:
     docker:
       - image: cibuilds/github:0.12.2
     steps:
-      - buildevents/with_job_span:
-          steps:
-            - attach_workspace:
-                at: artifacts
-            - run:
-                name: "Publish Release on GitHub"
-                command: |
-                  echo "about to publish to tag ${CIRCLE_TAG}"
-                  tar -xvf artifacts/honeyvent.tar
-                  ls -l *
-                  ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-linux-386
-                  ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-linux-amd64
-                  ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-linux-arm64
-                  ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-darwin-amd64
+      - attach_workspace:
+          at: artifacts
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            echo "about to publish to tag ${CIRCLE_TAG}"
+            tar -xvf artifacts/honeyvent.tar
+            ls -l *
+            ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-linux-386
+            ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-linux-amd64
+            ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-linux-arm64
+            ghr --draft -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/honeyvent-darwin-amd64
 
 workflows:
   build:
     jobs:
-      - setup:
-          filters:
-            tags:
-              only: /.*/
-      - watch:
-          context: Honeycomb Secrets for Public Repos
-          requires:
-            - setup
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore:
-                - /pull\/.*/
-                - /dependabot\/.*/
       - test:
-          requires:
-            - setup
           filters:
             tags:
               only: /.*/
