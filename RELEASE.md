@@ -2,7 +2,7 @@
 
 1. Use [go-licenses](https://github.com/google/go-licenses) to ensure all project dependency licenses are correctly represented in this repository:
     - Install go-licenses (if not already installed) `go install github.com/google/go-licenses@latest`
-    - Run and save licenses `go-licenses save github.com/honeyvent --save_path="./LICENSES"`
+    - Run and save licenses `go-licenses save github.com/honeycombio/honeyvent --save_path="./LICENSES"`
     - If there are any changes, submit PR to update licenses.
 1. Update `CHANGELOG.md` with the changes since the last release.
 1. Commit changes, push, and open a release preparation PR for review.
