@@ -12,6 +12,12 @@ If you have a working go environment in your build, the easiest way to install `
 go get github.com/honeycombio/honeyvent/
 ```
 
+If you're using go 1.17 or greater you should use `go install` instead, since `go get` is [deprecated](https://go.dev/doc/go-get-install-deprecation).
+
+```
+go install github.com/honeycombio/honeyvent@latest
+```
+
 ## Usage
 
 Call with a collection of names and values to send an event from the
