@@ -14,6 +14,6 @@ require (
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.0.0-20210320140829-1e4c9ba3b0c4 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
