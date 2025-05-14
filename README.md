@@ -2,7 +2,7 @@
 
 [![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/honeyvent?color=success)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 
-**STATUS: Archived** This project is now archived. See #75 for details. For further questions, visit the Honeycomb Pollinators Community Slack.
+**STATUS: Archived** This project is now archived. See #75 for details. For further questions, visit the [Honeycomb Pollinators Community Slack](https://docs.honeycomb.io/troubleshoot/community/#join-pollinators-community-slack).
 
 CLI for sending individual events in to [Honeycomb](https://docs.honeycomb.io)
 
